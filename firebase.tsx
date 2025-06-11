@@ -22,28 +22,36 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
+// Initialize Firebase only if config is valid
+if (!firebaseConfig.apiKey) {
+  throw new Error(
+    "Firebase API Key is missing. Please check your environment variables."
+  );
+}
+
 const app = initializeApp(firebaseConfig);
 
 // Initialize Auth with persistence
 const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Error setting auth persistence:", error);
-});
+
+// Only set persistence on client side
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error("Error setting auth persistence:", error);
+  });
+}
 
 // Initialize Firestore with persistence
 const db = getFirestore(app);
+
+// Only enable persistence on client side
 if (typeof window !== "undefined") {
-  // Only enable persistence in browser environment
   enableIndexedDbPersistence(db).catch((error) => {
-    console.error("Error enabling Firestore persistence:", error);
     if (error.code === "failed-precondition") {
-      // Multiple tabs open, persistence can only be enabled in one tab at a time
       console.log(
         "Multiple tabs open, persistence can only be enabled in one tab at a time."
       );
     } else if (error.code === "unimplemented") {
-      // The current browser doesn't support persistence
       console.log("The current browser doesn't support persistence.");
     }
   });
