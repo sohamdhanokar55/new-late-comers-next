@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isDepartmentAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dept_admin';
+    }
+    
+    function isUserInDepartment(dept) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dept == dept;
+    }
+    
+    function isValidTimestamp() {
+      return request.time != null;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Late-comers collection
+    match /late-comers/{dept} {
+      allow read: if isAuthenticated() && (isUserInDepartment(dept) || isAdmin());
+      allow create: if isAuthenticated() && isUserInDepartment(dept);
+      allow update: if isAuthenticated() && (isUserInDepartment(dept) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Archive collection
+    match /archive/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isUserInDepartment(docId.split('_')[0]) || isAdmin());
+      allow update: if isAuthenticated() && (isUserInDepartment(docId.split('_')[0]) || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+} 

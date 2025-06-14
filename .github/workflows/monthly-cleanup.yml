@@ -1,0 +1,125 @@
+name: Monthly Attendance Cleanup
+
+on:
+  schedule:
+    # Run at midnight on the first day of each month
+    - cron: "0 0 1 * *"
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create cleanup script
+        run: |
+          cat > cleanup.js << 'EOL'
+          const { initializeApp, cert } = require('firebase-admin/app');
+          const { getFirestore } = require('firebase-admin/firestore');
+
+          // Initialize Firebase Admin
+          const app = initializeApp({
+            credential: cert({
+              projectId: process.env.FIREBASE_PROJECT_ID,
+              clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+              privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            }),
+          });
+
+          const db = getFirestore(app);
+
+          // List of departments to clean up
+          const DEPARTMENTS_TO_CLEAN = ['AN', 'TE', 'ME', 'CE', 'AE'];
+
+          async function performCleanup() {
+            try {
+              const now = new Date();
+              const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+              const monthYear = `${lastMonth.getMonth() + 1} ${lastMonth.getFullYear()}`;
+              console.log(`Starting cleanup for ${monthYear}`);
+
+              // Get all departments
+              const lateComersRef = db.collection('late-comers');
+              const lateComersSnapshot = await lateComersRef.get();
+
+              let cleanedCount = 0;
+              let skippedCount = 0;
+
+              for (const deptDoc of lateComersSnapshot.docs) {
+                const dept = deptDoc.id;
+                
+                if (DEPARTMENTS_TO_CLEAN.includes(dept)) {
+                  // Delete the document for specified departments
+                  await deptDoc.ref.delete();
+                  console.log(`Deleted department: ${dept}`);
+                  cleanedCount++;
+                } else {
+                  console.log(`Skipped department: ${dept} (not in cleanup list)`);
+                  skippedCount++;
+                }
+              }
+
+              console.log('Cleanup completed successfully');
+              console.log(`Summary:
+                - Departments cleaned: ${cleanedCount}
+                - Departments skipped: ${skippedCount}
+                - Total departments processed: ${lateComersSnapshot.size}
+              `);
+
+              return { 
+                success: true, 
+                message: `Successfully cleaned up data for ${monthYear}`,
+                stats: {
+                  cleaned: cleanedCount,
+                  skipped: skippedCount,
+                  total: lateComersSnapshot.size
+                }
+              };
+            } catch (error) {
+              console.error('Cleanup error:', error);
+              throw error;
+            }
+          }
+
+          // Run the cleanup
+          performCleanup()
+            .then(result => {
+              console.log('Success:', result);
+              process.exit(0);
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              process.exit(1);
+            });
+          EOL
+
+      - name: Run cleanup script
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+        run: node cleanup.js
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Monthly Cleanup Failed',
+              body: 'The monthly attendance cleanup workflow failed. Please check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.'
+            });

@@ -11,6 +11,7 @@ import {
   setDoc,
   serverTimestamp,
   getDoc,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "../../firebase";
 import { Loader2 } from "lucide-react";
@@ -95,6 +96,9 @@ export default function BarcodeScanner() {
       return;
     }
 
+    let newCount = 0;
+    let unpaidFine = 0;
+
     try {
       setIsSubmitting(true);
       const roll = +rollNumber;
@@ -105,64 +109,77 @@ export default function BarcodeScanner() {
       const userDoc = await getDoc(userDocRef);
       const userDept = userDoc.data()?.dept || "unknown";
 
-      // Get or create late-comer document
-      const lateComersDocRef = doc(db, "late-comers", userDept);
-      const lateComersDoc = await getDoc(lateComersDocRef);
-      const existingData = lateComersDoc.data() || {};
-      const existingRollData = existingData[roll] || {};
+      // Use transaction to ensure data consistency
+      await runTransaction(db, async (transaction) => {
+        // Get or create late-comer document
+        const lateComersDocRef = doc(db, "late-comers", userDept);
+        const lateComersDoc = await transaction.get(lateComersDocRef);
+        const existingData = lateComersDoc.data() || {};
+        const existingRollData = existingData[roll] || {};
 
-      // Calculate new count and prepare timestamp field
-      const newCount = (existingRollData.count || 0) + 1;
-      const timestampField = `L${newCount}`;
+        // Validate if student already marked today
+        const today = new Date().toDateString();
+        const lastMarkedDate = existingRollData.lastMarkedDate;
+        if (lastMarkedDate === today) {
+          throw new Error("Attendance already marked for today");
+        }
 
-      // Calculate unpaid fine
-      const unpaidFine = calculateUnpaidFine(newCount);
+        // Calculate new count and prepare timestamp field
+        newCount = (existingRollData.count || 0) + 1;
+        const timestampField = `L${newCount}`;
 
-      // Prepare data to save
-      const lateComersData = {
-        [roll]: {
-          ...existingRollData,
-          dept: userDept,
-          count: newCount,
-          uf: unpaidFine,
-          pf: existingRollData.pf || 0,
-          timestamps: {
-            ...(existingRollData.timestamps || {}),
-            [timestampField]: timestamp,
+        // Calculate unpaid fine
+        unpaidFine = calculateUnpaidFine(newCount);
+
+        // Prepare data to save
+        const lateComersData = {
+          [roll]: {
+            ...existingRollData,
+            dept: userDept,
+            count: newCount,
+            uf: unpaidFine,
+            pf: existingRollData.pf || 0,
+            timestamps: {
+              ...(existingRollData.timestamps || {}),
+              [timestampField]: timestamp,
+            },
+            createdAt: existingRollData.createdAt || createdAt,
+            lastMarkedDate: today,
+            lastUpdated: timestamp,
           },
-          createdAt: existingRollData.createdAt || createdAt,
-        },
-      };
+        };
 
-      // Save to late-comers collection
-      await setDoc(lateComersDocRef, lateComersData, { merge: true });
+        // Update late-comers collection
+        transaction.set(lateComersDocRef, lateComersData, { merge: true });
 
-      // Prepare and save to archive collection
-      const archiveMonth = `${userDept}_${month + 1}_${year}`;
-      const archiveDocRef = doc(db, "archive", archiveMonth);
-      const archiveDoc = await getDoc(archiveDocRef);
-      const existingArchiveData = archiveDoc.data() || {};
-      const archiveRecord = existingArchiveData[roll] || {};
+        // Update archive collection
+        const archiveMonth = `${userDept}_${month + 1}_${year}`;
+        const archiveDocRef = doc(db, "archive", archiveMonth);
+        const archiveDoc = await transaction.get(archiveDocRef);
+        const existingArchiveData = archiveDoc.data() || {};
+        const archiveRecord = existingArchiveData[roll] || {};
 
-      const archiveData = {
-        [roll]: {
-          ...archiveRecord,
-          rollNumber: roll.toString(),
-          dept: userDept,
-          count: newCount,
-          uf: unpaidFine,
-          pf: existingRollData.pf || 0,
-          timestamps: {
-            ...(archiveRecord.timestamps || {}),
-            [timestampField]: timestamp,
+        const archiveData = {
+          [roll]: {
+            ...archiveRecord,
+            rollNumber: roll.toString(),
+            dept: userDept,
+            count: newCount,
+            uf: unpaidFine,
+            pf: existingRollData.pf || 0,
+            timestamps: {
+              ...(archiveRecord.timestamps || {}),
+              [timestampField]: timestamp,
+            },
+            createdAt: existingRollData.createdAt || createdAt,
+            lastUpdated: timestamp,
+            lastMarkedDate: today,
           },
-          createdAt: existingRollData.createdAt || createdAt,
-          lastUpdated: timestamp,
-        },
-      };
+        };
 
-      // Save to archive collection
-      await setDoc(archiveDocRef, archiveData, { merge: true });
+        // Update archive collection
+        transaction.set(archiveDocRef, archiveData, { merge: true });
+      });
 
       // Show appropriate toast message
       if (newCount > 3) {
@@ -181,11 +198,15 @@ export default function BarcodeScanner() {
       // Clear input and refocus
       setRollNumber("");
       inputRef.current?.focus();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error marking attendance:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to mark attendance. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to mark attendance. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
