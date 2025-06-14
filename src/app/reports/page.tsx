@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2, Upload } from "lucide-react";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "../../../firebase";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { Input } from "@/components/ui/input";
 import { Timestamp } from "firebase/firestore";
 
@@ -56,6 +56,7 @@ interface ExcelRecord {
   Name: string;
   Dept: string;
   Semister: string;
+  // Add any additional fields from Google Sheet if needed
 }
 
 interface ExcelRow {
@@ -82,6 +83,14 @@ function formatTimestamp(timestamp: any): string {
   return "-";
 }
 
+// Add a helper function to normalize roll numbers for comparison
+function normalizeRollNumber(rollNumber: string): string {
+  return String(rollNumber)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]/g, ""); // Remove any special characters
+}
+
 export default function ReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +99,7 @@ export default function ReportsPage() {
     (AttendanceRecord & ExcelRecord)[]
   >([]);
 
-  // Replace this with your Google Spreadsheet link
+  // Google Sheets URL
   const SPREADSHEET_URL =
     "https://docs.google.com/spreadsheets/d/1ALQWqADE8E3DBwIL3U-RaYg8vY-t-Yn1/edit?usp=sharing&ouid=117677212679251065100&rtpof=true&sd=true";
 
@@ -185,47 +194,32 @@ export default function ReportsPage() {
         "bytes"
       );
 
-      // Read the Excel file
-      const sourceWorkbook = XLSX.read(new Uint8Array(arrayBuffer), {
-        type: "array",
-      });
-      console.log("Available sheets:", sourceWorkbook.SheetNames);
+      // Read the Excel file using ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
 
-      // Use the first sheet
-      const sourceWorksheet =
-        sourceWorkbook.Sheets[sourceWorkbook.SheetNames[0]];
-      console.log("Worksheet range:", sourceWorksheet["!ref"]);
-
-      // Convert to JSON with headers
-      const excelData = XLSX.utils.sheet_to_json(sourceWorksheet, {
-        raw: false,
-        defval: "",
-        blankrows: false,
-        header: 1,
-      }) as Array<Array<string | number | null>>;
-
-      console.log("Raw Excel Data:", JSON.stringify(excelData, null, 2));
-
-      if (!Array.isArray(excelData) || excelData.length < 3) {
-        throw new Error("Spreadsheet is empty or has no data rows");
+      // Get the first worksheet
+      const worksheet = workbook.getWorksheet(1);
+      if (!worksheet) {
+        throw new Error("No worksheet found in the Excel file");
       }
 
-      // Skip the first row (A, B, C) and get headers from second row
-      const headers = excelData[0].map((h) => String(h));
+      // Get headers from first row
+      const headers = worksheet.getRow(1).values as string[];
       console.log("Headers found:", headers);
 
       // Find column indices
       const rollNoIndex = headers.findIndex(
-        (header) => header.toLowerCase().trim() === "rollno"
+        (header) => String(header).toLowerCase().trim() === "rollno"
       );
       const nameIndex = headers.findIndex(
-        (header) => header.toLowerCase().trim() === "name"
+        (header) => String(header).toLowerCase().trim() === "name"
       );
       const deptIndex = headers.findIndex(
-        (header) => header.toLowerCase().trim() === "dept"
+        (header) => String(header).toLowerCase().trim() === "dept"
       );
       const semesterIndex = headers.findIndex(
-        (header) => header.toLowerCase().trim() === "semister"
+        (header) => String(header).toLowerCase().trim() === "semister"
       );
 
       console.log("Column indices:", {
@@ -248,46 +242,40 @@ export default function ReportsPage() {
         );
       }
 
-      // Convert the data to our format, skipping the first row (headers)
-      const normalizedData = excelData
-        .slice(1)
-        .map((row: Array<string | number | null>) => {
-          if (!Array.isArray(row)) {
-            console.warn(`Invalid row format:`, row);
-            return null;
-          }
+      // Convert worksheet to JSON
+      const normalizedData: ExcelRecord[] = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Skip header row
 
-          const rollNo = row[rollNoIndex];
-          const name = row[nameIndex];
-          const dept = row[deptIndex];
-          const semister = row[semesterIndex];
+        const rollNo = row.getCell(rollNoIndex).value;
+        const name = row.getCell(nameIndex).value;
+        const dept = row.getCell(deptIndex).value;
+        const semister = row.getCell(semesterIndex).value;
 
-          console.log(`Processing row:`, { rollNo, name, dept, semister });
+        console.log(`Processing row ${rowNumber}:`, {
+          rollNo,
+          name,
+          dept,
+          semister,
+        });
 
-          if (!rollNo || !name || !dept || !semister) {
-            console.warn(`Row has missing data:`, {
-              rollNo,
-              name,
-              dept,
-              semister,
-            });
-            return null;
-          }
+        if (!rollNo || !name || !dept || !semister) {
+          console.warn(`Row ${rowNumber} has missing data:`, {
+            rollNo,
+            name,
+            dept,
+            semister,
+          });
+          return;
+        }
 
-          const normalizedRow: ExcelRecord = {
-            RollNo: String(rollNo).trim(),
-            Name: String(name).trim(),
-            Dept: String(dept).trim(),
-            Semister: String(semister).trim(),
-          };
-
-          console.log(`Normalized row:`, normalizedRow);
-          return normalizedRow;
-        })
-        .filter(
-          (row): row is ExcelRecord =>
-            row !== null && typeof row.RollNo === "string" && row.RollNo !== ""
-        );
+        normalizedData.push({
+          RollNo: String(rollNo).trim(),
+          Name: String(name).trim(),
+          Dept: String(dept).trim(),
+          Semister: String(semister).trim(),
+        });
+      });
 
       console.log("Normalized data:", normalizedData);
 
@@ -339,7 +327,11 @@ Found headers: ${headers.join(", ")}`);
       }
     } catch (error) {
       console.error("Error processing Excel file:", error);
-      alert("Failed to process Excel file. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to process Excel file. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -349,10 +341,34 @@ Found headers: ${headers.join(", ")}`);
     if (!selectedMonth || !matchedRecords.length) return;
 
     try {
+      // Create a new workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Attendance");
+
+      // Define columns
+      worksheet.columns = [
+        { header: "RollNo", key: "RollNo", width: 15 },
+        { header: "Name", key: "Name", width: 30 },
+        { header: "Dept", key: "Dept", width: 15 },
+        { header: "Semister", key: "Semister", width: 15 },
+        { header: "L1", key: "L1", width: 20 },
+        { header: "L2", key: "L2", width: 20 },
+        { header: "L3", key: "L3", width: 20 },
+        { header: "L4", key: "L4", width: 20 },
+        { header: "L5", key: "L5", width: 20 },
+        { header: "L6", key: "L6", width: 20 },
+        { header: "L7", key: "L7", width: 20 },
+        { header: "L8", key: "L8", width: 20 },
+        { header: "Paid Fine", key: "Paid Fine", width: 15 },
+        { header: "Unpaid Fine", key: "Unpaid Fine", width: 15 },
+        { header: "Paid at", key: "Paid at", width: 20 },
+      ];
+
+      // Add data
       const dataToExport = matchedRecords.map((record) => ({
         RollNo: record.rollNumber,
         Name: record.Name,
-        Dept: record.Dept, // Using Excel sheet department
+        Dept: record.Dept,
         Semister: record.Semister,
         L1: formatTimestamp(record.timestamps?.L1),
         L2: formatTimestamp(record.timestamps?.L2),
@@ -367,21 +383,29 @@ Found headers: ${headers.join(", ")}`);
         "Paid at": formatTimestamp(record.paidAt),
       }));
 
-      const exportWorksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const exportWorkbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(
-        exportWorkbook,
-        exportWorksheet,
-        "Attendance"
-      );
+      worksheet.addRows(dataToExport);
 
-      const maxWidth = dataToExport.reduce(
-        (w, r) => Math.max(w, Object.keys(r).length),
-        0
-      );
-      exportWorksheet["!cols"] = new Array(maxWidth).fill({ wch: 15 });
+      // Style the header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
 
-      XLSX.writeFile(exportWorkbook, `Attendance_${selectedMonth}.xlsx`);
+      // Generate and download the file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Attendance_${selectedMonth}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
       alert(`Excel file has been downloaded for ${selectedMonth}.`);
     } catch (error) {
       console.error("Error exporting data:", error);
@@ -495,19 +519,37 @@ Found headers: ${headers.join(", ")}`);
                           ? matchedRecords
                           : records
                         ).map((record) => (
-                          <TableRow key={record.rollNumber}>
+                          <TableRow
+                            key={record.rollNumber}
+                            className={
+                              record.Name === "Not Found" ? "bg-yellow-50" : ""
+                            }
+                          >
                             <TableCell>{record.rollNumber}</TableCell>
-                            <TableCell>
-                              {(record as AttendanceRecord & ExcelRecord)
-                                .Name || "N/A"}
+                            <TableCell
+                              className={
+                                record.Name === "Not Found"
+                                  ? "text-yellow-600"
+                                  : ""
+                              }
+                            >
+                              {(record as AttendanceRecord & ExcelRecord).Name}
                             </TableCell>
                             <TableCell>
                               {(record as AttendanceRecord & ExcelRecord)
                                 .Dept || record.dept}
                             </TableCell>
-                            <TableCell>
-                              {(record as AttendanceRecord & ExcelRecord)
-                                .Semister || "N/A"}
+                            <TableCell
+                              className={
+                                record.Semister === "Not Found"
+                                  ? "text-yellow-600"
+                                  : ""
+                              }
+                            >
+                              {
+                                (record as AttendanceRecord & ExcelRecord)
+                                  .Semister
+                              }
                             </TableCell>
                             <TableCell>
                               {formatTimestamp(record.timestamps?.L1)}
