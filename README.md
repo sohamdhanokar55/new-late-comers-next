@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Late Comers Attendance Management System
 
-## Getting Started
+A modern web application to automate and manage the late comers attendance and fine system for colleges.  
+**Built as a real-world project for my college's official late comers tracking and reporting.**
 
-First, run the development server:
+---
+
+## 🚀 Features
+
+- **Secure Login:** Role-based authentication for students and admins.
+- **Barcode/Manual Attendance:** Mark late attendance by scanning barcodes or entering roll numbers.
+- **Duplicate Prevention:** Prevents multiple late entries for the same student on the same day.
+- **Fine Calculation:** Automatically tracks late counts and calculates fines for repeated offenses.
+- **Payment Management:** Admins can mark fines as paid and update records.
+- **Department-wise Records:** Data is organized by department for easy management.
+- **Monthly Archiving:** Attendance data is archived monthly for reporting and compliance.
+- **Excel Export:** Download attendance and fine data as Excel files.
+- **Google Sheets Integration:** Optionally match records with Google Sheets data.
+- **Responsive UI:** Clean, mobile-friendly interface with real-time feedback.
+
+---
+
+## 🏫 Project Context
+
+This repository was created as a **college project** and is actively used for my college's actual late comers system.  
+It aims to replace manual registers and spreadsheets with a reliable, automated, and user-friendly solution.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
+- **Backend/Database:** Firebase Firestore
+- **Authentication:** Firebase Auth
+- **State Management:** React Context API
+- **Excel Export:** ExcelJS
+- **Icons:** Lucide React
+- **CI/CD:** GitHub Actions (for monthly data cleanup)
+
+---
+
+## 🏗️ Project Structure
+
+```
+late-comers-next-main/
+  ├── src/
+  │   ├── app/           # Next.js app directory (pages, layouts, reports)
+  │   ├── components/    # Reusable React components (BarcodeScanner, Table, etc.)
+  │   ├── hooks/         # Custom React hooks
+  │   ├── lib/           # Utility functions and actions
+  │   └── context/       # Auth context
+  ├── public/            # Static assets (icons, manifest, etc.)
+  ├── firebase.tsx       # Firebase configuration
+  ├── firestore.rules    # Firestore security rules
+  └── ...                # Config files, README, etc.
+```
+
+---
+
+## ⚡ Getting Started
+
+### 1. **Clone the repository**
+
+```bash
+git clone https://github.com/yourusername/late-comers-next-main.git
+cd late-comers-next-main
+```
+
+### 2. **Install dependencies**
+
+```bash
+npm install
+```
+
+### 3. **Set up Firebase**
+
+- Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
+- Enable Firestore and Authentication.
+- Copy your Firebase config to `firebase.tsx`.
+
+### 4. **Configure Firestore Rules**
+
+- Use the provided `firestore.rules` for secure access.
+
+### 5. **Run the development server**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📊 Reporting & Export
 
-## Learn More
+- View monthly attendance and fine reports in the **Reports** section.
+- Export data as Excel files for offline use or sharing.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🤝 Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project was built for a specific college use case.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📄 License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is for educational and institutional use ONLY.  
+
+---
+
+## 🙋‍♂️ Author
+  
+**Soham Dhanokar**
+<br>
+Students Council, Agnel Polytechnic
+<br>
+sosadhanokar@gmail.com 
+
+
+---
+
+**Thank you for checking out this project! If you find it useful, please star the repo.**
