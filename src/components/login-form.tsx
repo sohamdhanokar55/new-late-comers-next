@@ -21,10 +21,9 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [dept, setDept] = useState("");
   const [password, setPassword] = useState("");
-  const [isRegister, setIsRegister] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
-  const { signUp, login } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async function () {
@@ -37,17 +36,12 @@ export function LoginForm({
     }
     setSubmitting(true);
     try {
-      if (isRegister) {
-        await signUp(dept, password);
-        console.log("Signing up a new user");
-      } else {
-        await login(dept, password);
-        console.log("Logging in");
-      }
+      await login(dept, password);
+      console.log("Logging in");
       router.push("/");
     } catch (e) {
       toast({
-        title: `There was a error ${isRegister ? "signing" : "logging"} you up`,
+        title: "There was an error logging you in",
         variant: "destructive",
       });
       console.log(e);
@@ -60,15 +54,12 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">
-            {isRegister ? "Register" : "Login"}
-          </CardTitle>
+          <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            Enter your username and password login to your account
+            Enter your username and password to login to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* <form> */}
           <div className="flex flex-col gap-6">
             <div className="grid gap-2">
               <Label htmlFor="email">Department</Label>
@@ -100,17 +91,6 @@ export function LoginForm({
               {submitting ? "Submitting" : "Submit"}
             </Button>
           </div>
-          <div className="mt-4 text-center text-sm">
-            {isRegister ? "Already have an account?" : "Don't have an account?"}
-            <a
-              href="#"
-              onClick={() => setIsRegister(!isRegister)}
-              className="underline underline-offset-4"
-            >
-              {isRegister ? "Login" : "Sign up"}
-            </a>
-          </div>
-          {/* </form> */}
         </CardContent>
       </Card>
     </div>

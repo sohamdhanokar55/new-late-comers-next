@@ -79,7 +79,7 @@ export default function BarcodeScanner() {
 
   const calculateUnpaidFine = (count: number): number => {
     if (count <= 3) return 0;
-    return (count - 3) * 50; // 50 rupees for each time after 3rd late mark
+    return 50; // 50 rupees for each time after 3rd late mark
   };
 
   const handleSubmit = async () => {
@@ -111,11 +111,21 @@ export default function BarcodeScanner() {
 
       // Use transaction to ensure data consistency
       await runTransaction(db, async (transaction) => {
-        // Get or create late-comer document
+        // Get all required documents first
         const lateComersDocRef = doc(db, "late-comers", userDept);
-        const lateComersDoc = await transaction.get(lateComersDocRef);
+        const archiveMonth = `${userDept}_${month + 1}_${year}`;
+        const archiveDocRef = doc(db, "archive", archiveMonth);
+
+        // Perform all reads first
+        const [lateComersDoc, archiveDoc] = await Promise.all([
+          transaction.get(lateComersDocRef),
+          transaction.get(archiveDocRef),
+        ]);
+
         const existingData = lateComersDoc.data() || {};
         const existingRollData = existingData[roll] || {};
+        const existingArchiveData = archiveDoc.data() || {};
+        const archiveRecord = existingArchiveData[roll] || {};
 
         // Validate if student already marked today
         const today = new Date().toDateString();
@@ -131,7 +141,7 @@ export default function BarcodeScanner() {
         // Calculate unpaid fine
         unpaidFine = calculateUnpaidFine(newCount);
 
-        // Prepare data to save
+        // Prepare all data to write
         const lateComersData = {
           [roll]: {
             ...existingRollData,
@@ -148,16 +158,6 @@ export default function BarcodeScanner() {
             lastUpdated: timestamp,
           },
         };
-
-        // Update late-comers collection
-        transaction.set(lateComersDocRef, lateComersData, { merge: true });
-
-        // Update archive collection
-        const archiveMonth = `${userDept}_${month + 1}_${year}`;
-        const archiveDocRef = doc(db, "archive", archiveMonth);
-        const archiveDoc = await transaction.get(archiveDocRef);
-        const existingArchiveData = archiveDoc.data() || {};
-        const archiveRecord = existingArchiveData[roll] || {};
 
         const archiveData = {
           [roll]: {
@@ -177,7 +177,8 @@ export default function BarcodeScanner() {
           },
         };
 
-        // Update archive collection
+        // Perform all writes after reads are complete
+        transaction.set(lateComersDocRef, lateComersData, { merge: true });
         transaction.set(archiveDocRef, archiveData, { merge: true });
       });
 

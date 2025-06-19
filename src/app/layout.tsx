@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import { AuthProvider } from "../../context/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useEffect } from "react";
+import Head from "next/head";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,6 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <title>Agnel Late Comers</title>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
         <meta

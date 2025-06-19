@@ -30,6 +30,9 @@ import { db } from "../../../firebase";
 import ExcelJS from "exceljs";
 import { Input } from "@/components/ui/input";
 import { Timestamp } from "firebase/firestore";
+import { useAuth } from "../../../context/AuthContext";
+import Login from "@/components/Login";
+import Loading from "@/components/Loading";
 
 interface AttendanceRecord {
   rollNumber: string;
@@ -92,7 +95,11 @@ function normalizeRollNumber(rollNumber: string): string {
 }
 
 export default function ReportsPage() {
+  const { currentUser, loading } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>(
+    new Date().getFullYear().toString()
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [matchedRecords, setMatchedRecords] = useState<
@@ -162,8 +169,16 @@ export default function ReportsPage() {
 
   const handleMonthChange = async (value: string) => {
     setSelectedMonth(value);
-    const [month, year] = value.split("-");
-    await fetchRecords(month, year);
+    if (value && selectedYear) {
+      await fetchRecords(value, selectedYear);
+    }
+  };
+
+  const handleYearChange = async (value: string) => {
+    setSelectedYear(value);
+    if (selectedMonth && value) {
+      await fetchRecords(selectedMonth, value);
+    }
   };
 
   const processExcelFile = async () => {
@@ -252,12 +267,12 @@ export default function ReportsPage() {
         const dept = row.getCell(deptIndex).value;
         const semister = row.getCell(semesterIndex).value;
 
-        console.log(`Processing row ${rowNumber}:`, {
-          rollNo,
-          name,
-          dept,
-          semister,
-        });
+        // console.log(`Processing row ${rowNumber}:`, {
+        //   rollNo,
+        //   name,
+        //   dept,
+        //   semister,
+        // });
 
         if (!rollNo || !name || !dept || !semister) {
           console.warn(`Row ${rowNumber} has missing data:`, {
@@ -277,7 +292,7 @@ export default function ReportsPage() {
         });
       });
 
-      console.log("Normalized data:", normalizedData);
+      // console.log("Normalized data:", normalizedData);
 
       if (normalizedData.length === 0) {
         throw new Error("No valid data rows found in Spreadsheet");
@@ -400,13 +415,15 @@ Found headers: ${headers.join(", ")}`);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Attendance_${selectedMonth}.xlsx`;
+      a.download = `Attendance_${selectedMonth}_${selectedYear}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      alert(`Excel file has been downloaded for ${selectedMonth}.`);
+      alert(
+        `Excel file has been downloaded for ${selectedMonth} ${selectedYear}.`
+      );
     } catch (error) {
       console.error("Error exporting data:", error);
       alert("Failed to export data. Please try again later.");
@@ -415,39 +432,62 @@ Found headers: ${headers.join(", ")}`);
 
   const currentYear = new Date().getFullYear();
 
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (!currentUser) {
+    return <Login />;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <Card>
         <CardHeader>
           <CardTitle>Late Comers Report</CardTitle>
           <CardDescription>
-            View and download late comers reports by month. The system will
-            match records with the master Spreadsheet.
+            View and download late comers reports by month and year. The system
+            will match records with the master Spreadsheet.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
-              <Select onValueChange={handleMonthChange} value={selectedMonth}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const month = i + 1;
-                    const year = new Date().getFullYear();
-                    const value = `${month}-${year}`;
-                    return (
-                      <SelectItem key={value} value={value}>
-                        {new Date(year, i).toLocaleString("default", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Select onValueChange={handleMonthChange} value={selectedMonth}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const month = i + 1;
+                      return (
+                        <SelectItem key={month} value={month.toString()}>
+                          {new Date(2000, i).toLocaleString("default", {
+                            month: "long",
+                          })}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                <Select onValueChange={handleYearChange} value={selectedYear}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => {
+                      const year = 2025 + i; // Starting from 2025 up to 2035
+                      return (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="flex flex-row gap-2 w-full sm:w-auto">
                 <Button
@@ -487,7 +527,15 @@ Found headers: ${headers.join(", ")}`);
                   <CardTitle>Records Preview</CardTitle>
                   <CardDescription>
                     Showing {matchedRecords.length || records.length} records
-                    for {selectedMonth}
+                    for{" "}
+                    {selectedMonth &&
+                      selectedYear &&
+                      `${new Date(
+                        2000,
+                        parseInt(selectedMonth) - 1
+                      ).toLocaleString("default", {
+                        month: "long",
+                      })} ${selectedYear}`}
                     {matchedRecords.length > 0 &&
                       " (Matched with Spreadsheet data)"}
                   </CardDescription>
@@ -518,70 +566,72 @@ Found headers: ${headers.join(", ")}`);
                         {(matchedRecords.length > 0
                           ? matchedRecords
                           : records
-                        ).map((record) => (
-                          <TableRow
-                            key={record.rollNumber}
-                            className={
-                              record.Name === "Not Found" ? "bg-yellow-50" : ""
-                            }
-                          >
-                            <TableCell>{record.rollNumber}</TableCell>
-                            <TableCell
+                        ).map((record) => {
+                          const typedRecord = record as AttendanceRecord &
+                            ExcelRecord;
+                          return (
+                            <TableRow
+                              key={record.rollNumber}
                               className={
-                                record.Name === "Not Found"
-                                  ? "text-yellow-600"
+                                typedRecord.Name === "Not Found"
+                                  ? "bg-yellow-50"
                                   : ""
                               }
                             >
-                              {(record as AttendanceRecord & ExcelRecord).Name}
-                            </TableCell>
-                            <TableCell>
-                              {(record as AttendanceRecord & ExcelRecord)
-                                .Dept || record.dept}
-                            </TableCell>
-                            <TableCell
-                              className={
-                                record.Semister === "Not Found"
-                                  ? "text-yellow-600"
-                                  : ""
-                              }
-                            >
-                              {
-                                (record as AttendanceRecord & ExcelRecord)
-                                  .Semister
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L1)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L2)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L3)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L4)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L5)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L6)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L7)}
-                            </TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.timestamps?.L8)}
-                            </TableCell>
-                            <TableCell>₹{record.paidFine}</TableCell>
-                            <TableCell>₹{record.uf || 0}</TableCell>
-                            <TableCell>
-                              {formatTimestamp(record.paidAt)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                              <TableCell>{record.rollNumber}</TableCell>
+                              <TableCell
+                                className={
+                                  typedRecord.Name === "Not Found"
+                                    ? "text-yellow-600"
+                                    : ""
+                                }
+                              >
+                                {typedRecord.Name}
+                              </TableCell>
+                              <TableCell>
+                                {typedRecord.Dept || record.dept}
+                              </TableCell>
+                              <TableCell
+                                className={
+                                  typedRecord.Semister === "Not Found"
+                                    ? "text-yellow-600"
+                                    : ""
+                                }
+                              >
+                                {typedRecord.Semister}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L1)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L2)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L3)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L4)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L5)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L6)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L7)}
+                              </TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.timestamps?.L8)}
+                              </TableCell>
+                              <TableCell>₹{record.paidFine}</TableCell>
+                              <TableCell>₹{record.uf || 0}</TableCell>
+                              <TableCell>
+                                {formatTimestamp(record.paidAt)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
