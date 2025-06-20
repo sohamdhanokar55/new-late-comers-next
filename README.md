@@ -29,15 +29,59 @@ It aims to replace manual registers and spreadsheets with a reliable, automated,
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
-- **Backend/Database:** Firebase Firestore
-- **Authentication:** Firebase Auth
-- **State Management:** React Context API
-- **Excel Export:** ExcelJS
-- **Icons:** Lucide React
-- **CI/CD:** GitHub Actions (for monthly data cleanup)
+<div align="center">
+
+<table>
+  <tr>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" width="40" height="40" alt="Next.js" /><br/>
+      <b>Next.js</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="40" height="40" alt="React" /><br/>
+      <b>React</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="40" height="40" alt="TypeScript" /><br/>
+      <b>TypeScript</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://avatars.githubusercontent.com/u/67109815?s=48&v=4" width="40" height="40" alt="Tailwind CSS" /><br/>
+      <b>Tailwind CSS</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firebase/firebase-plain.svg" width="40" height="40" alt="Firebase" /><br/>
+      <b>Firebase</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="40" height="40" alt="GitHub Actions" /><br/>
+      <b>GitHub Actions</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://avatars.githubusercontent.com/u/46546912?s=48&v=4" width="40" height="40" alt="ExcelJS" /><br/>
+      <b>ExcelJS</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://lucide.dev/logo.svg" width="40" height="40" alt="Lucide Icons" /><br/>
+      <b>Lucide Icons</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" width="40" height="40" alt="HTML5" /><br/>
+      <b>HTML5</b>
+    </td>
+    <td align="center" width="120">
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" width="40" height="40" alt="CSS3" /><br/>
+      <b>CSS3</b>
+    </td>
+  </tr>
+</table>
+
+</div>
 
 ---
+
 
 ## 🏗️ Project Structure
 
@@ -123,3 +167,4 @@ sosadhanokar@gmail.com
 ---
 
 **Thank you for checking out this project! If you find it useful, please star the repo.**
+
