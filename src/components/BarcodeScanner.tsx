@@ -174,8 +174,8 @@ export default function BarcodeScanner() {
               [timestampField]: timestamp,
             },
             createdAt: existingRollData.createdAt || createdAt,
-            lastUpdated: timestamp,
             lastMarkedDate: today,
+            lastUpdated: timestamp,
           },
         };
 
