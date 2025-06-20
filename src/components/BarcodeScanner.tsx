@@ -77,9 +77,11 @@ export default function BarcodeScanner() {
     return true;
   };
 
-  const calculateUnpaidFine = (count: number): number => {
+  const calculateUnpaidFine = (count: number, paidFine: number): number => {
     if (count <= 3) return 0;
-    return 50; // 50 rupees for each time after 3rd late mark
+    const totalFine = (count - 3) * 50;
+    const unpaid = totalFine - paidFine;
+    return unpaid > 0 ? unpaid : 0;
   };
 
   const handleSubmit = async () => {
@@ -139,7 +141,7 @@ export default function BarcodeScanner() {
         const timestampField = `L${newCount}`;
 
         // Calculate unpaid fine
-        unpaidFine = calculateUnpaidFine(newCount);
+        unpaidFine = calculateUnpaidFine(newCount, existingRollData.pf || 0);
 
         // Prepare all data to write
         const lateComersData = {
