@@ -109,13 +109,13 @@ export default function BarcodeScanner() {
       // Get user's department from their document
       const userDocRef = doc(db, "users", currentUser.uid);
       const userDoc = await getDoc(userDocRef);
-      const userDept = userDoc.data()?.dept || "unknown";
+      // const userDept = userDoc.data()?.dept || "unknown";
 
       // Use transaction to ensure data consistency
       await runTransaction(db, async (transaction) => {
         // Get all required documents first
-        const lateComersDocRef = doc(db, "late-comers", userDept);
-        const archiveMonth = `${userDept}_${month + 1}_${year}`;
+        const lateComersDocRef = doc(db, "late-comers", "late-data");
+        const archiveMonth = `${month + 1}_${year}`;
         const archiveDocRef = doc(db, "archive", archiveMonth);
 
         // Perform all reads first
@@ -131,10 +131,10 @@ export default function BarcodeScanner() {
 
         // Validate if student already marked today
         const today = new Date().toDateString();
-        const lastMarkedDate = existingRollData.lastMarkedDate;
-        if (lastMarkedDate === today) {
-          throw new Error("Attendance already marked for today");
-        }
+        // const lastMarkedDate = existingRollData.lastMarkedDate;
+        // if (lastMarkedDate === today) {
+        //   throw new Error("Attendance already marked for today");
+        // }
 
         // Calculate new count and prepare timestamp field
         newCount = (existingRollData.count || 0) + 1;
@@ -147,7 +147,7 @@ export default function BarcodeScanner() {
         const lateComersData = {
           [roll]: {
             ...existingRollData,
-            dept: userDept,
+            // dept: userDept,
             count: newCount,
             uf: unpaidFine,
             pf: existingRollData.pf || 0,
@@ -165,7 +165,7 @@ export default function BarcodeScanner() {
           [roll]: {
             ...archiveRecord,
             rollNumber: roll.toString(),
-            dept: userDept,
+            // dept: userDept,
             count: newCount,
             uf: unpaidFine,
             pf: existingRollData.pf || 0,

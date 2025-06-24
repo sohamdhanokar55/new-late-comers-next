@@ -26,7 +26,6 @@ import Login from "./Login";
 import { useToast } from "@/hooks/use-toast";
 
 type LateComerData = {
-  dept: string;
   count: number;
   uf: number;
   pf: number;
@@ -35,39 +34,20 @@ type LateComerData = {
 };
 
 export default function LateComersTable() {
-  const { currentUser, userDataobj, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [lateComers, setLateComers] = useState<Record<string, LateComerData>>(
     {}
   );
-  const [dept, setDept] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
-    if (currentUser && userDataobj) {
-      // Get department from user data
-      const userDept = userDataobj.dept || "";
-      setDept(userDept);
-
-      // Get late-comers data for this department
+    if (currentUser) {
       const fetchLateComers = async () => {
         try {
-          // Check if department exists
-          if (!userDept) {
-            console.error("No department found for user");
-            toast({
-              title: "Error",
-              description: "No department found. Please contact administrator.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          const lateComersDocRef = doc(db, "late-comers", userDept);
+          const lateComersDocRef = doc(db, "late-comers", "late-data");
           const lateComersDoc = await getDoc(lateComersDocRef);
           const lateComersData = lateComersDoc.data() || {};
-
-          // Set all late comers data for this department
           setLateComers(lateComersData);
         } catch (error) {
           console.error("Error fetching late-comers:", error);
@@ -78,12 +58,9 @@ export default function LateComersTable() {
           });
         }
       };
-
-      if (userDept) {
-        fetchLateComers();
-      }
+      fetchLateComers();
     }
-  }, [currentUser, userDataobj, toast]);
+  }, [currentUser, toast]);
 
   if (loading) {
     return <Loading />;
@@ -95,17 +72,7 @@ export default function LateComersTable() {
 
   const handlePaymentUpdate = async (rollNumber: string) => {
     try {
-      // Check if department exists
-      if (!dept) {
-        toast({
-          title: "Error",
-          description: "No department found. Please contact administrator.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const lateComersDocRef = doc(db, "late-comers", dept);
+      const lateComersDocRef = doc(db, "late-comers", "late-data");
       const isConfirm = window.confirm(
         `Are you sure you want to mark Roll No. ${rollNumber} as paid?`
       );
@@ -118,7 +85,7 @@ export default function LateComersTable() {
         const date = new Date();
         const month = date.getMonth();
         const year = date.getFullYear();
-        const archiveMonth = `${dept}_${month + 1}_${year}`;
+        const archiveMonth = `${month + 1}_${year}`;
         const archiveDocRef = doc(db, "archive", archiveMonth);
 
         // Get existing archive data
@@ -143,7 +110,6 @@ export default function LateComersTable() {
           [rollNumber]: {
             ...archiveRecord,
             rollNumber: rollNumber,
-            dept: currentRecord.dept,
             count: currentRecord.count,
             pf: (archiveRecord.pf || 0) + fineAmount,
             uf: 0,
@@ -211,10 +177,10 @@ export default function LateComersTable() {
         <div className="flex items-center">
           <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
           <div>
-            <h3 className="font-medium">Pending Fines Summary - {dept}</h3>
+            <h3 className="font-medium">Pending Fines Summary</h3>
             <p className="text-sm text-gray-600">
               Showing {filteredAndSortedLateComers.length} students with unpaid
-              fines from {dept} department
+              fines
             </p>
           </div>
         </div>
@@ -245,7 +211,6 @@ export default function LateComersTable() {
             <TableRow>
               <TableHead>Roll Number</TableHead>
               <TableHead>Late Count</TableHead>
-              <TableHead>Department</TableHead>
               <TableHead>Unpaid Fine</TableHead>
               <TableHead>Last Updated</TableHead>
               <TableHead>Action</TableHead>
@@ -267,7 +232,6 @@ export default function LateComersTable() {
                       {lateComers[rollNumber].count} times
                     </span>
                   </TableCell>
-                  <TableCell>{lateComers[rollNumber].dept}</TableCell>
                   <TableCell>₹{lateComers[rollNumber].uf}</TableCell>
                   <TableCell>
                     {lateComers[rollNumber].lastUpdated
@@ -288,10 +252,10 @@ export default function LateComersTable() {
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={5}
                   className="text-center text-muted-foreground py-8"
                 >
-                  No students with unpaid fines found in {dept} department
+                  No students with unpaid fines found
                 </TableCell>
               </TableRow>
             )}

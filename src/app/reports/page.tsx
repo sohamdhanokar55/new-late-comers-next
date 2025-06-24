@@ -105,6 +105,9 @@ export default function ReportsPage() {
   const [matchedRecords, setMatchedRecords] = useState<
     (AttendanceRecord & ExcelRecord)[]
   >([]);
+  const [selectedDept, setSelectedDept] = useState<string>("placeholder");
+  const [selectedSemester, setSelectedSemester] =
+    useState<string>("placeholder");
 
   // Google Sheets URL
   const SPREADSHEET_URL =
@@ -353,14 +356,11 @@ Found headers: ${headers.join(", ")}`);
   };
 
   const handleDownload = async () => {
-    if (!selectedMonth || !matchedRecords.length) return;
-
+    if (!selectedMonth || !getFilteredData().length) return;
     try {
       // Create a new workbook
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Attendance");
-
-      // Define columns
       worksheet.columns = [
         { header: "RollNo", key: "RollNo", width: 15 },
         { header: "Name", key: "Name", width: 30 },
@@ -378,13 +378,12 @@ Found headers: ${headers.join(", ")}`);
         { header: "Unpaid Fine", key: "Unpaid Fine", width: 15 },
         { header: "Paid at", key: "Paid at", width: 20 },
       ];
-
-      // Add data
-      const dataToExport = matchedRecords.map((record) => ({
+      // Add only filtered data
+      const dataToExport = getFilteredData().map((record: any) => ({
         RollNo: record.rollNumber,
-        Name: record.Name,
-        Dept: record.Dept,
-        Semister: record.Semister,
+        Name: getField(record, "Name"),
+        Dept: getField(record, "Dept"),
+        Semister: getField(record, "Semister"),
         L1: formatTimestamp(record.timestamps?.L1),
         L2: formatTimestamp(record.timestamps?.L2),
         L3: formatTimestamp(record.timestamps?.L3),
@@ -428,6 +427,32 @@ Found headers: ${headers.join(", ")}`);
       console.error("Error exporting data:", error);
       alert("Failed to export data. Please try again later.");
     }
+  };
+
+  // Helper to get a field from a record, case-insensitive
+  function getField(record: any, key: string) {
+    return (
+      record[key] ||
+      record[key.toLowerCase()] ||
+      record[key.charAt(0).toUpperCase() + key.slice(1)] ||
+      ""
+    );
+  }
+
+  // Filtered data based on department and semester
+  const getFilteredData = () => {
+    if (selectedDept === "placeholder" || selectedSemester === "placeholder")
+      return [];
+    const data = matchedRecords;
+    return data.filter((record: any) => {
+      const dept = (
+        getField(record, "Dept") || getField(record, "dept")
+      ).toUpperCase();
+      const sem = String(
+        getField(record, "Semister") || getField(record, "semister")
+      );
+      return dept === selectedDept && sem === selectedSemester;
+    });
   };
 
   const currentYear = new Date().getFullYear();
@@ -512,7 +537,11 @@ Found headers: ${headers.join(", ")}`);
                 <Button
                   variant="outline"
                   onClick={handleDownload}
-                  disabled={!matchedRecords.length}
+                  disabled={
+                    selectedDept === "placeholder" ||
+                    selectedSemester === "placeholder" ||
+                    !getFilteredData().length
+                  }
                   className="flex-1 sm:flex-none whitespace-nowrap"
                 >
                   <Download className="mr-2 h-4 w-4" />
@@ -521,84 +550,88 @@ Found headers: ${headers.join(", ")}`);
               </div>
             </div>
 
-            {(matchedRecords.length > 0 || records.length > 0) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Records Preview</CardTitle>
-                  <CardDescription>
-                    Showing {matchedRecords.length || records.length} records
-                    for{" "}
-                    {selectedMonth &&
-                      selectedYear &&
-                      `${new Date(
-                        2000,
-                        parseInt(selectedMonth) - 1
-                      ).toLocaleString("default", {
-                        month: "long",
-                      })} ${selectedYear}`}
-                    {matchedRecords.length > 0 &&
-                      " (Matched with Spreadsheet data)"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>RollNo</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Dept</TableHead>
-                          <TableHead>Semister</TableHead>
-                          <TableHead>L1</TableHead>
-                          <TableHead>L2</TableHead>
-                          <TableHead>L3</TableHead>
-                          <TableHead>L4</TableHead>
-                          <TableHead>L5</TableHead>
-                          <TableHead>L6</TableHead>
-                          <TableHead>L7</TableHead>
-                          <TableHead>L8</TableHead>
-                          <TableHead>Paid Fine</TableHead>
-                          <TableHead>Unpaid Fine</TableHead>
-                          <TableHead>Paid at</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(matchedRecords.length > 0
-                          ? matchedRecords
-                          : records
-                        ).map((record) => {
-                          const typedRecord = record as AttendanceRecord &
-                            ExcelRecord;
-                          return (
-                            <TableRow
-                              key={record.rollNumber}
-                              className={
-                                typedRecord.Name === "Not Found"
-                                  ? "bg-yellow-50"
-                                  : ""
-                              }
-                            >
+            {/* Only show these filters after spreadsheet is processed */}
+            {matchedRecords.length > 0 && (
+              <div className="flex gap-2 w-full sm:w-auto items-center">
+                <Select onValueChange={setSelectedDept} value={selectedDept}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Select Dept" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>
+                      Select Dept
+                    </SelectItem>
+                    <SelectItem value="AN">AN</SelectItem>
+                    <SelectItem value="TE">TE</SelectItem>
+                    <SelectItem value="ME">ME</SelectItem>
+                    <SelectItem value="CE">CE</SelectItem>
+                    <SelectItem value="AE">AE</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  onValueChange={setSelectedSemester}
+                  value={selectedSemester}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Select Sem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>
+                      Select Sem
+                    </SelectItem>
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Only show table if both filters are selected and there is filtered data */}
+            {matchedRecords.length > 0 &&
+              selectedDept !== "placeholder" &&
+              selectedSemester !== "placeholder" &&
+              getFilteredData().length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Records Preview</CardTitle>
+                    <CardDescription>
+                      Showing {getFilteredData().length} records for Dept:{" "}
+                      {selectedDept}, Sem: {selectedSemester}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>RollNo</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Dept</TableHead>
+                            <TableHead>Semister</TableHead>
+                            <TableHead>L1</TableHead>
+                            <TableHead>L2</TableHead>
+                            <TableHead>L3</TableHead>
+                            <TableHead>L4</TableHead>
+                            <TableHead>L5</TableHead>
+                            <TableHead>L6</TableHead>
+                            <TableHead>L7</TableHead>
+                            <TableHead>L8</TableHead>
+                            <TableHead>Paid Fine</TableHead>
+                            <TableHead>Unpaid Fine</TableHead>
+                            <TableHead>Paid at</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getFilteredData().map((record: any) => (
+                            <TableRow key={record.rollNumber}>
                               <TableCell>{record.rollNumber}</TableCell>
-                              <TableCell
-                                className={
-                                  typedRecord.Name === "Not Found"
-                                    ? "text-yellow-600"
-                                    : ""
-                                }
-                              >
-                                {typedRecord.Name}
-                              </TableCell>
+                              <TableCell>{getField(record, "Name")}</TableCell>
+                              <TableCell>{getField(record, "Dept")}</TableCell>
                               <TableCell>
-                                {typedRecord.Dept || record.dept}
-                              </TableCell>
-                              <TableCell
-                                className={
-                                  typedRecord.Semister === "Not Found"
-                                    ? "text-yellow-600"
-                                    : ""
-                                }
-                              >
-                                {typedRecord.Semister}
+                                {getField(record, "Semister")}
                               </TableCell>
                               <TableCell>
                                 {formatTimestamp(record.timestamps?.L1)}
@@ -630,14 +663,13 @@ Found headers: ${headers.join(", ")}`);
                                 {formatTimestamp(record.paidAt)}
                               </TableCell>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
           </div>
         </CardContent>
       </Card>
