@@ -10,38 +10,41 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
-export function LoginForm({
+export function SignupForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
-  const [dept, setDept] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { signUp } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async function () {
-    if (!dept || !password) {
+    if (!email || !password) {
       toast({
-        title: "Please Enter email and password",
+        title: "Please enter email and password",
         variant: "destructive",
       });
       return;
     }
     setSubmitting(true);
     try {
-      await login(dept, password);
-      console.log("Logging in");
+      await signUp(email, password);
+      toast({
+        title: "Account created successfully!",
+        variant: "default",
+      });
       router.push("/");
     } catch (e) {
       toast({
-        title: "There was an error logging you in",
+        title: "There was an error creating your account",
         variant: "destructive",
       });
       console.log(e);
@@ -54,22 +57,22 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
-            Enter your username and password to login to your account
+            Enter your email and password to create a new account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-6">
             <div className="grid gap-2">
-              <Label htmlFor="email">Department</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                value={dept}
+                value={email}
                 onChange={(e) => {
-                  setDept(e.target.value);
+                  setEmail(e.target.value);
                 }}
                 type="email"
-                placeholder="AN@GMAIL.COM"
+                placeholder="your@email.com"
                 required
               />
             </div>
@@ -88,20 +91,17 @@ export function LoginForm({
               />
             </div>
             <Button type="submit" className="w-full" onClick={handleSubmit}>
-              {submitting ? "Submitting" : "Submit"}
+              {submitting ? "Submitting" : "Sign Up"}
             </Button>
           </div>
         </CardContent>
       </Card>
-      {/* <div className="text-center mt-4">
-        <span>Don't have an account? </span>
-        <a
-          href="/signup"
-          className="text-primary underline hover:text-primary/80"
-        >
-          Sign Up
+      <div className="text-center mt-4">
+        <span>Already have an account? </span>
+        <a href="/" className="text-primary underline hover:text-primary/80">
+          Login
         </a>
-      </div> */}
+      </div>
     </div>
   );
 }

@@ -131,10 +131,10 @@ export default function BarcodeScanner() {
 
         // Validate if student already marked today
         const today = new Date().toDateString();
-        // const lastMarkedDate = existingRollData.lastMarkedDate;
-        // if (lastMarkedDate === today) {
-        //   throw new Error("Attendance already marked for today");
-        // }
+        const lastMarkedDate = existingRollData.lastMarkedDate;
+        if (lastMarkedDate === today) {
+          throw new Error("Attendance already marked for today");
+        }
 
         // Calculate new count and prepare timestamp field
         newCount = (existingRollData.count || 0) + 1;

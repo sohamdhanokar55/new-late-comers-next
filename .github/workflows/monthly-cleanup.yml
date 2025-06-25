@@ -41,7 +41,7 @@ jobs:
           const db = getFirestore(app);
 
           // List of departments to clean up
-          const DEPARTMENTS_TO_CLEAN = ['AN', 'TE', 'ME', 'CE', 'AE'];
+          const DEPARTMENTS_TO_CLEAN = ['late-data'];
 
           async function performCleanup() {
             try {
