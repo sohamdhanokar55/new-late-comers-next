@@ -65,14 +65,14 @@ export default function BarcodeScanner() {
       return false;
     }
 
-    if (roll.length !== 5) {
-      toast({
-        title: "Invalid Roll Number Format",
-        description: "Roll number must be exactly 5 digits",
-        variant: "destructive",
-      });
-      return false;
-    }
+    // if (roll.length !== 5) {
+    //   toast({
+    //     title: "Invalid Roll Number Format",
+    //     description: "Roll number must be exactly 5 digits",
+    //     variant: "destructive",
+    //   });
+    //   return false;
+    // }
 
     return true;
   };
@@ -237,7 +237,7 @@ export default function BarcodeScanner() {
         <Input
           ref={inputRef}
           type="number"
-          placeholder="Enter Roll Number (5 digits)"
+          placeholder="Enter Roll Number"
           value={rollNumber}
           onChange={(e) => setRollNumber(e.target.value)}
           onKeyPress={handleKeyPress}
