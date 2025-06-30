@@ -62,14 +62,14 @@ export function LoginForm({
         <CardContent>
           <div className="flex flex-col gap-6">
             <div className="grid gap-2">
-              <Label htmlFor="email">Department</Label>
+              <Label htmlFor="email">Username</Label>
               <Input
                 value={dept}
                 onChange={(e) => {
                   setDept(e.target.value);
                 }}
                 type="email"
-                placeholder="AN@GMAIL.COM"
+                placeholder="APV1@GMAIL.COM"
                 required
               />
             </div>
@@ -93,7 +93,7 @@ export function LoginForm({
           </div>
         </CardContent>
       </Card>
-      {/* <div className="text-center mt-4">
+      <div className="text-center mt-4">
         <span>Don't have an account? </span>
         <a
           href="/signup"
@@ -101,7 +101,7 @@ export function LoginForm({
         >
           Sign Up
         </a>
-      </div> */}
+      </div>
     </div>
   );
 }

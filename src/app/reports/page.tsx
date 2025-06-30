@@ -111,7 +111,7 @@ export default function ReportsPage() {
 
   // Google Sheets URL
   const SPREADSHEET_URL =
-    "https://docs.google.com/spreadsheets/d/1ALQWqADE8E3DBwIL3U-RaYg8vY-t-Yn1/edit?usp=sharing&ouid=117677212679251065100&rtpof=true&sd=true";
+    "https://docs.google.com/spreadsheets/d/1gIhr8fpign1g11MDkyylcEfSGlLwrxG9/edit?usp=sharing&ouid=107022832664358528942&rtpof=true&sd=true";
 
   const fetchRecords = async (month: string, year: string) => {
     setIsLoading(true);
