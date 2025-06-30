@@ -40,9 +40,6 @@ jobs:
 
           const db = getFirestore(app);
 
-          // List of departments to clean up
-          const DEPARTMENTS_TO_CLEAN = ['late-data'];
-
           async function performCleanup() {
             try {
               const now = new Date();
@@ -50,42 +47,14 @@ jobs:
               const monthYear = `${lastMonth.getMonth() + 1} ${lastMonth.getFullYear()}`;
               console.log(`Starting cleanup for ${monthYear}`);
 
-              // Get all departments
-              const lateComersRef = db.collection('late-comers');
-              const lateComersSnapshot = await lateComersRef.get();
+              // Delete only the 'late-data' document in the 'late-comers' collection
+              const lateDataDocRef = db.collection('late-comers').doc('late-data');
+              await lateDataDocRef.delete();
+              console.log(`Deleted 'late-data' document in 'late-comers' collection.`);
 
-              let cleanedCount = 0;
-              let skippedCount = 0;
-
-              for (const deptDoc of lateComersSnapshot.docs) {
-                const dept = deptDoc.id;
-                
-                if (DEPARTMENTS_TO_CLEAN.includes(dept)) {
-                  // Delete the document for specified departments
-                  await deptDoc.ref.delete();
-                  console.log(`Deleted department: ${dept}`);
-                  cleanedCount++;
-                } else {
-                  console.log(`Skipped department: ${dept} (not in cleanup list)`);
-                  skippedCount++;
-                }
-              }
-
-              console.log('Cleanup completed successfully');
-              console.log(`Summary:
-                - Departments cleaned: ${cleanedCount}
-                - Departments skipped: ${skippedCount}
-                - Total departments processed: ${lateComersSnapshot.size}
-              `);
-
-              return { 
-                success: true, 
-                message: `Successfully cleaned up data for ${monthYear}`,
-                stats: {
-                  cleaned: cleanedCount,
-                  skipped: skippedCount,
-                  total: lateComersSnapshot.size
-                }
+              return {
+                success: true,
+                message: `Successfully cleaned up 'late-data' document for ${monthYear}`,
               };
             } catch (error) {
               console.error('Cleanup error:', error);
