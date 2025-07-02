@@ -65,14 +65,14 @@ export default function BarcodeScanner() {
       return false;
     }
 
-    // if (roll.length !== 5) {
-    //   toast({
-    //     title: "Invalid Roll Number Format",
-    //     description: "Roll number must be exactly 5 digits",
-    //     variant: "destructive",
-    //   });
-    //   return false;
-    // }
+    if (roll.length >= 8) {
+      toast({
+        title: "Invalid Roll Number Format",
+        description: "Roll number must be less than 8 digits",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     return true;
   };
@@ -247,19 +247,33 @@ export default function BarcodeScanner() {
           min={0}
         />
       </div>
-      <Button
-        onClick={handleSubmit}
-        disabled={isSubmitting || !rollNumber}
-        className="w-full py-6 text-lg"
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
-          </>
-        ) : (
-          "Mark Late"
-        )}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || !rollNumber}
+          className="w-full py-6 text-lg"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+            </>
+          ) : (
+            "Mark Late"
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setRollNumber("");
+            inputRef.current?.focus();
+          }}
+          disabled={isSubmitting || !rollNumber}
+          className="py-6 text-lg"
+        >
+          Clear
+        </Button>
+      </div>
     </div>
   );
 }

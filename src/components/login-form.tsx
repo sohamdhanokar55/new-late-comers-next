@@ -93,7 +93,7 @@ export function LoginForm({
           </div>
         </CardContent>
       </Card>
-      <div className="text-center mt-4">
+      {/* <div className="text-center mt-4">
         <span>Don't have an account? </span>
         <a
           href="/signup"
@@ -101,7 +101,7 @@ export function LoginForm({
         >
           Sign Up
         </a>
-      </div>
+      </div> */}
     </div>
   );
 }
