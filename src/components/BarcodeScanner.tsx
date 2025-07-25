@@ -22,6 +22,7 @@ export default function BarcodeScanner() {
   const { userDataobj, currentUser, loading } = useAuth();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const date = new Date();
   const month = date.getMonth();
@@ -132,9 +133,9 @@ export default function BarcodeScanner() {
         // Validate if student already marked today
         const today = new Date().toDateString();
         const lastMarkedDate = existingRollData.lastMarkedDate;
-        if (lastMarkedDate === today) {
-          throw new Error("Attendance already marked for today");
-        }
+        // if (lastMarkedDate === today) {
+        //   throw new Error("Attendance already marked for today");
+        // }
 
         // Calculate new count and prepare timestamp field
         newCount = (existingRollData.count || 0) + 1;
@@ -191,6 +192,11 @@ export default function BarcodeScanner() {
           description: `Roll number ${roll} has been late ${newCount} times. Fine amount: ₹${unpaidFine}`,
           variant: "destructive",
         });
+        // Play collect-id sound
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play();
+        }
       } else {
         toast({
           title: "✅ Attendance Marked",
@@ -233,6 +239,8 @@ export default function BarcodeScanner() {
 
   return (
     <div className="space-y-4">
+      {/* Hidden audio element for collect-id sound */}
+      <audio ref={audioRef} src="/collect-id.mp3" preload="auto" />
       <div className="relative">
         <Input
           ref={inputRef}
